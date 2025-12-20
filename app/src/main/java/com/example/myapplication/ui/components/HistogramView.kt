@@ -30,6 +30,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
+import com.example.myapplication.domain.processor.HistogramData // <--- Importante: Añadido este import
 import com.example.myapplication.domain.processor.HistogramStatistics
 import kotlin.math.roundToInt
 
@@ -38,8 +39,8 @@ import kotlin.math.roundToInt
  */
 @Composable
 fun HistogramView(
-    histogramData: Long,
-    statistics: Long,
+    histogramData: HistogramData?, // <--- CORREGIDO: Ahora acepta el objeto correcto
+    statistics: HistogramStatistics?, // <--- CORREGIDO: Ahora acepta estadísticas
     isCalculating: Boolean = false,
     modifier: Modifier = Modifier
 ) {
@@ -139,7 +140,7 @@ fun HistogramView(
  */
 @Composable
 private fun RGBHistogramChart(
-    histogramData: Long,
+    histogramData: HistogramData, // <--- CORREGIDO: Tipo correcto
     modifier: Modifier = Modifier
 ) {
     val maxValue = histogramData.maxValue
@@ -152,7 +153,9 @@ private fun RGBHistogramChart(
     ) {
         val width = size.width
         val height = size.height
-        val barWidth = width / histogramData.red.size
+        // Evitamos división por cero si la lista está vacía
+        val listSize = if (histogramData.red.isNotEmpty()) histogramData.red.size else 1
+        val barWidth = width / listSize
 
         // Dibujar canal rojo
         drawHistogramPath(
@@ -205,7 +208,8 @@ private fun SingleChannelHistogramChart(
         ) {
             val width = size.width
             val height = size.height
-            val barWidth = width / data.size
+            val listSize = if (data.isNotEmpty()) data.size else 1
+            val barWidth = width / listSize
             val maxValue = data.maxOrNull() ?: 1f
 
             // Dibujar histograma relleno
@@ -247,9 +251,12 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawHistogramPath(
 ) {
     val path = Path()
 
+    // Evitar errores si maxValue es 0
+    val safeMaxValue = if (maxValue > 0) maxValue else 1f
+
     data.forEachIndexed { index, value ->
         val x = index * barWidth
-        val y = height - (value / maxValue * height).coerceIn(0f, height)
+        val y = height - (value / safeMaxValue * height).coerceIn(0f, height)
 
         if (index == 0) {
             path.moveTo(x, height)
