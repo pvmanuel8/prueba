@@ -1,0 +1,44 @@
+<resources>
+    <string name="app_name">EditorImagen3000</string>
+
+    <!-- Pantallas -->
+    <string name="gallery_title">Galería</string>
+    <string name="editor_title">Editor</string>
+    <string name="batch_title">Procesamiento por Lotes</string>
+    <string name="history_title">Historial</string>
+
+    <!-- Acciones -->
+    <string name="action_select_image">Seleccionar Imagen</string>
+    <string name="action_take_photo">Tomar Foto</string>
+    <string name="action_apply_filter">Aplicar Filtro</string>
+    <string name="action_save">Guardar</string>
+    <string name="action_share">Compartir</string>
+    <string name="action_cancel">Cancelar</string>
+    <string name="action_undo">Deshacer</string>
+    <string name="action_redo">Rehacer</string>
+
+    <!-- Filtros -->
+    <string name="filter_grayscale">Escala de Grises</string>
+    <string name="filter_sepia">Sepia</string>
+    <string name="filter_negative">Negativo</string>
+    <string name="filter_brightness">Brillo</string>
+    <string name="filter_contrast">Contraste</string>
+    <string name="filter_saturation">Saturación</string>
+    <string name="filter_blur">Desenfoque</string>
+    <string name="filter_sharpen">Enfoque</string>
+
+    <!-- Mensajes -->
+    <string name="processing">Procesando…</string>
+    <string name="saved_successfully">Imagen guardada correctamente</string>
+    <string name="error_loading_image">Error al cargar la imagen</string>
+    <string name="error_saving_image">Error al guardar la imagen</string>
+
+    <!-- Permisos -->
+    <string name="permission_camera_rationale">Se necesita permiso de cámara para tomar fotos</string>
+    <string name="permission_storage_rationale">Se necesita permiso de almacenamiento para acceder a las imágenes</string>
+
+    <!-- Información -->
+    <string name="image_info_resolution">Resolución: %1$s</string>
+    <string name="image_info_size">Tamaño: %1$s</string>
+    <string name="image_info_format">Formato: %1$s</string>
+</resources>
