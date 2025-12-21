@@ -33,6 +33,7 @@ class ImageRepository(private val context: Context) {
         loadFullResolution: Boolean = false
     ): Result<ImageData> = withContext(Dispatchers.IO) {
         try {
+            // Verificar que el URI sea válido
             val bitmap = if (loadFullResolution) {
                 // Cargar imagen completa
                 context.contentResolver.openInputStream(uri)?.use { stream ->
@@ -43,30 +44,38 @@ class ImageRepository(private val context: Context) {
                 uri.toBitmap(context)
             }
 
-            bitmap?.let {
-                // Corregir orientación según EXIF
-                val correctedBitmap = it.correctOrientation(context, uri)
+            if (bitmap == null) {
+                return@withContext Result.failure(Exception("No se pudo decodificar la imagen"))
+            }
 
-                val imageData = ImageData(
-                    id = UUID.randomUUID().toString(),
-                    uri = uri,
-                    bitmap = correctedBitmap,
-                    name = getFileNameFromUri(uri),
-                    width = correctedBitmap.width,
-                    height = correctedBitmap.height,
-                    sizeBytes = getFileSizeFromUri(uri),
-                    format = getImageFormat(uri)
-                )
+            // Corregir orientación según EXIF
+            val correctedBitmap = try {
+                bitmap.correctOrientation(context, uri)
+            } catch (e: Exception) {
+                e.printStackTrace()
+                bitmap // Si falla la corrección, usar bitmap original
+            }
 
-                // Guardar en caché
-                imageCache[imageData.id] = imageData
+            val imageData = ImageData(
+                id = UUID.randomUUID().toString(),
+                uri = uri,
+                bitmap = correctedBitmap,
+                name = getFileNameFromUri(uri),
+                width = correctedBitmap.width,
+                height = correctedBitmap.height,
+                sizeBytes = getFileSizeFromUri(uri),
+                format = getImageFormat(uri)
+            )
 
-                Result.success(imageData)
-            } ?: Result.failure(Exception("No se pudo cargar la imagen"))
+            // Guardar en caché local y global
+            imageCache[imageData.id] = imageData
+            com.example.myapplication.util.ImageCache.put(imageData)
+
+            Result.success(imageData)
 
         } catch (e: Exception) {
             e.printStackTrace()
-            Result.failure(e)
+            Result.failure(Exception("Error al cargar imagen: ${e.message}", e))
         }
     }
 
@@ -148,7 +157,12 @@ class ImageRepository(private val context: Context) {
      * Obtiene una imagen del caché
      */
     fun getImageFromCache(imageId: String): ImageData? {
-        return imageCache[imageId]
+        // Primero buscar en caché local
+        val localCache = imageCache[imageId]
+        if (localCache != null) return localCache
+
+        // Si no está, buscar en caché global
+        return com.example.myapplication.util.ImageCache.get(imageId)
     }
 
     /**
@@ -169,7 +183,8 @@ class ImageRepository(private val context: Context) {
      * Limpia el caché de imágenes
      */
     fun clearCache() {
-        imageCache.values.forEach { it.bitmap?.recycle() }
+        // NO reciclar bitmaps - pueden estar en uso en la UI
+        // imageCache.values.forEach { it.bitmap?.recycle() }
         imageCache.clear()
     }
 

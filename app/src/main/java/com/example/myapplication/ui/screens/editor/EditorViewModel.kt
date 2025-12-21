@@ -2,6 +2,7 @@ package com.example.myapplication.ui.screens.editor
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.myapplication.data.model.CompressionQuality
@@ -28,7 +29,7 @@ class EditorViewModel(context: Context) : ViewModel() {
     private val processBatchUseCase = ProcessBatchUseCase()
     private val saveImageUseCase = SaveImageUseCase(context)
 
-    // Instancia de tu calculadora nueva
+    // Instancia de tu calculadora de histograma
     private val histogramCalculator = HistogramCalculator()
 
     private val _uiState = MutableStateFlow<EditorUiState>(EditorUiState.Loading)
@@ -46,7 +47,7 @@ class EditorViewModel(context: Context) : ViewModel() {
     private val _appliedFilters = MutableStateFlow<List<FilterType>>(emptyList())
     val appliedFilters: StateFlow<List<FilterType>> = _appliedFilters.asStateFlow()
 
-    // --- VARIABLES DEL HISTOGRAMA (SIN DUPLICADOS) ---
+    // --- VARIABLES DEL HISTOGRAMA ---
     private val _histogramData = MutableStateFlow<HistogramData?>(null)
     val histogramData: StateFlow<HistogramData?> = _histogramData.asStateFlow()
 
@@ -63,10 +64,25 @@ class EditorViewModel(context: Context) : ViewModel() {
 
     private var currentJob: Job? = null
 
+    companion object {
+        private const val TAG = "EditorViewModel"
+    }
+
+    /**
+     * Carga una imagen para editar
+     */
     fun loadImage(imageId: String) {
         viewModelScope.launch {
             _uiState.value = EditorUiState.Loading
+
+            // Log para depuración
+            Log.d(TAG, "Intentando cargar imagen con ID: $imageId")
+
             val image = repository.getImageFromCache(imageId)
+
+            Log.d(TAG, "Imagen encontrada en caché: ${image != null}")
+            Log.d(TAG, "Bitmap disponible: ${image?.bitmap != null}")
+
             if (image != null && image.bitmap != null) {
                 _imageData.value = image
                 _originalBitmap.value = image.bitmap
@@ -80,7 +96,9 @@ class EditorViewModel(context: Context) : ViewModel() {
                 calculateHistogram(image.bitmap)
 
                 _uiState.value = EditorUiState.Ready
+                Log.d(TAG, "Imagen cargada exitosamente")
             } else {
+                Log.e(TAG, "Error: Imagen no encontrada o bitmap nulo")
                 _uiState.value = EditorUiState.Error("Imagen no encontrada")
             }
         }
@@ -118,6 +136,7 @@ class EditorViewModel(context: Context) : ViewModel() {
                     _uiState.value = EditorUiState.Ready
                 }
                 .onFailure { error ->
+                    Log.e(TAG, "Error al aplicar filtro: ${error.message}")
                     _uiState.value = EditorUiState.Error(error.message ?: "Error al aplicar filtro")
                 }
         }
@@ -178,7 +197,7 @@ class EditorViewModel(context: Context) : ViewModel() {
         }
     }
 
-    // Método para guardar proyecto (Si lo necesitas)
+    // Método para guardar proyecto
     fun saveAsProject(toGallery: Boolean = false, quality: CompressionQuality = CompressionQuality.HIGH) {
         val image = _imageData.value ?: return
         val filters = _appliedFilters.value
@@ -186,16 +205,17 @@ class EditorViewModel(context: Context) : ViewModel() {
             _uiState.value = EditorUiState.Saving
             saveImageUseCase.saveAsProject(image, filters, toGallery, quality)
                 .onSuccess { project -> _uiState.value = EditorUiState.ProjectSaved(project.id) }
-                .onFailure { error -> _uiState.value = EditorUiState.Error(error.message ?: "Error al guardar proyecto") }
+                .onFailure { error ->
+                    Log.e(TAG, "Error al guardar proyecto: ${error.message}")
+                    _uiState.value = EditorUiState.Error(error.message ?: "Error al guardar proyecto")
+                }
         }
     }
 
-    // Calcula el histograma usando las funciones suspendidas
     private fun calculateHistogram(bitmap: Bitmap) {
         viewModelScope.launch {
             _isCalculatingHistogram.value = true
             try {
-                // Como tus funciones ya usan 'withContext(Dispatchers.Default)', las llamamos directo
                 val histogram = histogramCalculator.calculateHistogram(bitmap)
                 val statistics = histogramCalculator.calculateStatistics(bitmap)
 
@@ -203,6 +223,7 @@ class EditorViewModel(context: Context) : ViewModel() {
                 _histogramStatistics.value = statistics
             } catch (e: Exception) {
                 e.printStackTrace()
+                Log.e(TAG, "Error calculando histograma: ${e.message}")
             } finally {
                 _isCalculatingHistogram.value = false
             }
@@ -239,7 +260,7 @@ class EditorViewModel(context: Context) : ViewModel() {
     }
 }
 
-// Estados corregidos con ProjectSaved incluido
+// Estados de la UI
 sealed class EditorUiState {
     data object Loading : EditorUiState()
     data object Ready : EditorUiState()

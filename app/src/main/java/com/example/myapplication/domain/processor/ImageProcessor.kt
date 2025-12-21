@@ -26,23 +26,33 @@ class ImageProcessor {
         bitmap: Bitmap,
         filter: FilterType
     ): Bitmap = withContext(Dispatchers.Default) {
-        when (filter) {
-            is FilterType.Grayscale -> applyGrayscale(bitmap)
-            is FilterType.Sepia -> applySepia(bitmap)
-            is FilterType.Negative -> applyNegative(bitmap)
-            is FilterType.Brightness -> applyBrightness(bitmap, filter.value)
-            is FilterType.Contrast -> applyContrast(bitmap, filter.value)
-            is FilterType.Saturation -> applySaturation(bitmap, filter.value)
-            is FilterType.Blur -> applyBlur(bitmap, filter.intensity)
-            is FilterType.Sharpen -> applySharpen(bitmap)
-            is FilterType.EdgeDetection -> applyEdgeDetection(bitmap)
-            is FilterType.Posterize -> applyPosterize(bitmap, filter.levels)
-            is FilterType.Vignette -> applyVignette(bitmap, filter.intensity)
-            is FilterType.Rotate -> applyRotate(bitmap, filter.degrees)
-            is FilterType.Flip -> applyFlip(bitmap, filter.horizontal)
-            is FilterType.Crop -> applyCrop(bitmap, filter.rect)
-            is FilterType.Resize -> applyResize(bitmap, filter.scale)
+        // IMPORTANTE: Crear una copia para no modificar el original
+        val workingBitmap = bitmap.copy(Bitmap.Config.ARGB_8888, true)
+
+        val result = when (filter) {
+            is FilterType.Grayscale -> applyGrayscale(workingBitmap)
+            is FilterType.Sepia -> applySepia(workingBitmap)
+            is FilterType.Negative -> applyNegative(workingBitmap)
+            is FilterType.Brightness -> applyBrightness(workingBitmap, filter.value)
+            is FilterType.Contrast -> applyContrast(workingBitmap, filter.value)
+            is FilterType.Saturation -> applySaturation(workingBitmap, filter.value)
+            is FilterType.Blur -> applyBlur(workingBitmap, filter.intensity)
+            is FilterType.Sharpen -> applySharpen(workingBitmap)
+            is FilterType.EdgeDetection -> applyEdgeDetection(workingBitmap)
+            is FilterType.Posterize -> applyPosterize(workingBitmap, filter.levels)
+            is FilterType.Vignette -> applyVignette(workingBitmap, filter.intensity)
+            is FilterType.Rotate -> applyRotate(workingBitmap, filter.degrees)
+            is FilterType.Flip -> applyFlip(workingBitmap, filter.horizontal)
+            is FilterType.Crop -> applyCrop(workingBitmap, filter.rect)
+            is FilterType.Resize -> applyResize(workingBitmap, filter.scale)
         }
+
+        // Liberar la copia de trabajo si es diferente del resultado
+        if (workingBitmap != result && workingBitmap != bitmap) {
+            workingBitmap.recycle()
+        }
+
+        result
     }
 
     // ==================== FILTROS BÁSICOS ====================

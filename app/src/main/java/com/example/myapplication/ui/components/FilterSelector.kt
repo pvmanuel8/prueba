@@ -1,4 +1,7 @@
+@file:OptIn(ExperimentalMaterial3Api::class)
+
 package com.example.myapplication.ui.components
+
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -34,9 +37,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.example.myapplication.data.model.FilterType
 import com.example.myapplication.data.model.FilterCategory
-
+import com.example.myapplication.data.model.FilterType
 
 /**
  * Selector de filtros con preview
@@ -312,9 +314,8 @@ private fun FilterItem(
     onClick: () -> Unit
 ) {
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
             containerColor = if (isSelected) {
                 MaterialTheme.colorScheme.primaryContainer
@@ -420,6 +421,5 @@ private fun getCategoryName(category: com.example.myapplication.data.model.Filte
         com.example.myapplication.data.model.FilterCategory.BASIC -> "Básicos"
         com.example.myapplication.data.model.FilterCategory.ADVANCED -> "Avanzados"
         com.example.myapplication.data.model.FilterCategory.TRANSFORM -> "Transformar"
-
     }
 }

@@ -32,9 +32,14 @@ class FilterEngine {
             oldValue: Bitmap,
             newValue: Bitmap?
         ) {
-            if (evicted && oldValue != newValue) {
+            // CORRECCIÓN: No reciclar manualmente.
+            // Si la UI todavía está usando 'oldValue', llamar a recycle() causará un crash.
+            // El Garbage Collector liberará la memoria cuando nadie la esté usando.
+
+            /* if (evicted && oldValue != newValue) {
                 oldValue.recycle()
             }
+            */
         }
     }
 
@@ -53,6 +58,7 @@ class FilterEngine {
 
             // Buscar en caché
             filterCache.get(cacheKey)?.let {
+                // Es seguro devolver la misma instancia porque no la reciclamos manualmente
                 return@withContext Result.success(it)
             }
 
@@ -176,6 +182,7 @@ class FilterEngine {
      * Limpia el caché
      */
     fun clearCache() {
+        // Al limpiar, tampoco reciclamos manualmente por seguridad
         filterCache.evictAll()
     }
 

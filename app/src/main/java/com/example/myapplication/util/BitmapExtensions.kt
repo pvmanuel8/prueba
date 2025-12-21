@@ -129,24 +129,26 @@ fun Uri.toBitmap(
     maxHeight: Int = Constants.PREVIEW_MAX_HEIGHT
 ): Bitmap? {
     return try {
+        // Primera pasada: obtener dimensiones
+        val options = BitmapFactory.Options().apply {
+            inJustDecodeBounds = true
+        }
+
         context.contentResolver.openInputStream(this)?.use { inputStream ->
-            // Primera pasada: obtener dimensiones
-            val options = BitmapFactory.Options().apply {
-                inJustDecodeBounds = true
-            }
             BitmapFactory.decodeStream(inputStream, null, options)
+        }
 
-            // Calcular factor de escala
-            val scaleFactor = calculateInSampleSize(options, maxWidth, maxHeight)
+        // Calcular factor de escala
+        val scaleFactor = calculateInSampleSize(options, maxWidth, maxHeight)
 
-            // Segunda pasada: cargar imagen redimensionada
-            context.contentResolver.openInputStream(this)?.use { secondStream ->
-                BitmapFactory.Options().apply {
-                    inSampleSize = scaleFactor
-                    inJustDecodeBounds = false
-                }.let { finalOptions ->
-                    BitmapFactory.decodeStream(secondStream, null, finalOptions)
-                }
+        // Segunda pasada: cargar imagen redimensionada
+        context.contentResolver.openInputStream(this)?.use { inputStream ->
+            BitmapFactory.Options().apply {
+                inSampleSize = scaleFactor
+                inJustDecodeBounds = false
+                inPreferredConfig = Bitmap.Config.ARGB_8888
+            }.let { finalOptions ->
+                BitmapFactory.decodeStream(inputStream, null, finalOptions)
             }
         }
     } catch (e: Exception) {
