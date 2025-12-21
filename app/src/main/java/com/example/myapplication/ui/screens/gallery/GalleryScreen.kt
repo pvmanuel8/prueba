@@ -1,5 +1,7 @@
 package com.example.myapplication.ui.screens.gallery
 
+
+
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -18,6 +20,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Card
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -41,7 +44,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
-
 import com.example.myapplication.data.model.ImageData
 import com.example.myapplication.ui.components.CameraButton
 import com.example.myapplication.ui.components.MultipleImagePickerButton
@@ -68,7 +70,14 @@ fun GalleryScreen(
     LaunchedEffect(uiState) {
         when (val state = uiState) {
             is GalleryUiState.Error -> {
+                android.util.Log.e("GalleryScreen", "Error: ${state.message}")
                 snackbarHostState.showSnackbar(state.message)
+            }
+            is GalleryUiState.Success -> {
+                android.util.Log.d("GalleryScreen", "Imagen cargada exitosamente")
+            }
+            is GalleryUiState.LoadingMultiple -> {
+                android.util.Log.d("GalleryScreen", "Cargando ${state.current}/${state.total}")
             }
             else -> {}
         }
@@ -77,7 +86,7 @@ fun GalleryScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Editor de Imagenes") },
+                title = { Text("Image Editor") },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                     titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
@@ -132,9 +141,12 @@ fun GalleryScreen(
                 // Seleccionar imagen individual
                 MultipleImagePickerButton(
                     onImagesSelected = { uris ->
+                        android.util.Log.d("GalleryScreen", "Imágenes seleccionadas: ${uris.size}")
                         if (uris.size == 1) {
+                            android.util.Log.d("GalleryScreen", "Cargando imagen única: ${uris.first()}")
                             viewModel.loadImage(uris.first())
                         } else {
+                            android.util.Log.d("GalleryScreen", "Cargando múltiples imágenes")
                             viewModel.loadMultipleImages(uris)
                         }
                     },
@@ -145,6 +157,7 @@ fun GalleryScreen(
                 // Tomar foto con cámara
                 CameraButton(
                     onImageCaptured = { uri ->
+                        android.util.Log.d("GalleryScreen", "Foto capturada: $uri")
                         viewModel.loadImage(uri)
                     },
                     modifier = Modifier.fillMaxWidth()
@@ -221,16 +234,17 @@ private fun ImageGrid(
 /**
  * Item individual del grid
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ImageGridItem(
     imageData: ImageData,
     onClick: () -> Unit
 ) {
     Card(
+        onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
             .aspectRatio(1f)
-            .clickable(onClick = onClick)
     ) {
         Box {
             AsyncImage(
