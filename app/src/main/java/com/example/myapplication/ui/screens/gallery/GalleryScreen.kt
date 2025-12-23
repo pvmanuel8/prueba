@@ -1,8 +1,5 @@
 package com.example.myapplication.ui.screens.gallery
 
-
-
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,7 +17,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Card
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -90,21 +86,7 @@ fun GalleryScreen(
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                     titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                ),
-                actions = {
-                    IconButton(onClick = onHistory) {
-                        Icon(
-                            imageVector = Icons.Default.History,
-                            contentDescription = "Historial"
-                        )
-                    }
-                    IconButton(onClick = { /* Configuración */ }) {
-                        Icon(
-                            imageVector = Icons.Default.Settings,
-                            contentDescription = "Configuración"
-                        )
-                    }
-                }
+                )
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -131,11 +113,29 @@ fun GalleryScreen(
                 else -> {}
             }
 
-            // Botones de acción
+            // --- CAMBIO: Contenedor del Grid con peso (weight) para ocupar espacio ---
+            Box(
+                modifier = Modifier
+                    .weight(1f) // Esto hace que ocupe todo el espacio disponible verticalmente
+                    .fillMaxWidth()
+            ) {
+                if (loadedImages.isEmpty()) {
+                    EmptyGalleryContent()
+                } else {
+                    ImageGrid(
+                        images = loadedImages,
+                        onImageClick = { imageData ->
+                            onImageSelected(imageData.id)
+                        }
+                    )
+                }
+            }
+
+            // --- CAMBIO: Botones de acción movidos al final ---
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp),
+                    .padding(16.dp), // Padding para separarlo de los bordes
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 // Seleccionar imagen individual
@@ -161,18 +161,6 @@ fun GalleryScreen(
                         viewModel.loadImage(uri)
                     },
                     modifier = Modifier.fillMaxWidth()
-                )
-            }
-
-            // Grid de imágenes cargadas
-            if (loadedImages.isEmpty()) {
-                EmptyGalleryContent()
-            } else {
-                ImageGrid(
-                    images = loadedImages,
-                    onImageClick = { imageData ->
-                        onImageSelected(imageData.id)
-                    }
                 )
             }
         }
