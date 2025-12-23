@@ -1,7 +1,6 @@
 package com.example.myapplication.ui.screens.gallery
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
@@ -13,18 +12,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.History
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -62,18 +57,11 @@ fun GalleryScreen(
     val loadedImages by viewModel.loadedImages.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
 
-    // Mostrar mensajes de error
+    // Mostrar mensajes de error o éxito
     LaunchedEffect(uiState) {
         when (val state = uiState) {
             is GalleryUiState.Error -> {
-                android.util.Log.e("GalleryScreen", "Error: ${state.message}")
                 snackbarHostState.showSnackbar(state.message)
-            }
-            is GalleryUiState.Success -> {
-                android.util.Log.d("GalleryScreen", "Imagen cargada exitosamente")
-            }
-            is GalleryUiState.LoadingMultiple -> {
-                android.util.Log.d("GalleryScreen", "Cargando ${state.current}/${state.total}")
             }
             else -> {}
         }
@@ -89,20 +77,54 @@ fun GalleryScreen(
                 )
             )
         },
+        // 1. LOS BOTONES VAN AQUÍ (Barra inferior fija)
+        bottomBar = {
+            Surface(
+                tonalElevation = 3.dp,
+                shadowElevation = 8.dp
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(50.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    MultipleImagePickerButton(
+                        onImagesSelected = { uris ->
+                            if (uris.size == 1) {
+                                viewModel.loadImage(uris.first())
+                            } else {
+                                viewModel.loadMultipleImages(uris)
+                            }
+                        },
+                        maxImages = 10,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    CameraButton(
+                        onImageCaptured = { uri ->
+                            viewModel.loadImage(uri)
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
+        },
         snackbarHost = { SnackbarHost(snackbarHostState) },
         modifier = modifier
     ) { paddingValues ->
+        // Contenido Principal
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
+                .padding(paddingValues) // Respeta el espacio de la topBar y bottomBar
         ) {
-            // Indicador de carga múltiple
+            // Indicador de carga
             when (val state = uiState) {
                 is GalleryUiState.LoadingMultiple -> {
                     LinearProgressIndicator(
                         progress =  state.current.toFloat() / state.total ,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
                     )
                     Text(
                         text = "Cargando ${state.current}/${state.total} imágenes...",
@@ -113,54 +135,16 @@ fun GalleryScreen(
                 else -> {}
             }
 
-            // --- CAMBIO: Contenedor del Grid con peso (weight) para ocupar espacio ---
-            Box(
-                modifier = Modifier
-                    .weight(1f) // Esto hace que ocupe todo el espacio disponible verticalmente
-                    .fillMaxWidth()
-            ) {
-                if (loadedImages.isEmpty()) {
-                    EmptyGalleryContent()
-                } else {
-                    ImageGrid(
-                        images = loadedImages,
-                        onImageClick = { imageData ->
-                            onImageSelected(imageData.id)
-                        }
-                    )
-                }
-            }
-
-            // --- CAMBIO: Botones de acción movidos al final ---
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp), // Padding para separarlo de los bordes
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                // Seleccionar imagen individual
-                MultipleImagePickerButton(
-                    onImagesSelected = { uris ->
-                        android.util.Log.d("GalleryScreen", "Imágenes seleccionadas: ${uris.size}")
-                        if (uris.size == 1) {
-                            android.util.Log.d("GalleryScreen", "Cargando imagen única: ${uris.first()}")
-                            viewModel.loadImage(uris.first())
-                        } else {
-                            android.util.Log.d("GalleryScreen", "Cargando múltiples imágenes")
-                            viewModel.loadMultipleImages(uris)
-                        }
-                    },
-                    maxImages = 10,
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                // Tomar foto con cámara
-                CameraButton(
-                    onImageCaptured = { uri ->
-                        android.util.Log.d("GalleryScreen", "Foto capturada: $uri")
-                        viewModel.loadImage(uri)
-                    },
-                    modifier = Modifier.fillMaxWidth()
+            // 2. GRID O MENSAJE VACÍO
+            // Usamos weight(1f) directamente aquí. La columna ocupará todo el espacio vertical
+            // disponible entre la barra de arriba y la de abajo.
+            if (loadedImages.isEmpty()) {
+                EmptyGalleryContent(modifier = Modifier.weight(1f))
+            } else {
+                ImageGrid(
+                    images = loadedImages,
+                    onImageClick = { imageData -> onImageSelected(imageData.id) },
+                    modifier = Modifier.weight(1f) // Importante: Esto activa el scroll
                 )
             }
         }
@@ -171,44 +155,43 @@ fun GalleryScreen(
  * Contenido cuando no hay imágenes
  */
 @Composable
-private fun EmptyGalleryContent() {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
+private fun EmptyGalleryContent(modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier.fillMaxWidth(), // Usa el modifier pasado (weight)
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
     ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Text(
-                text = "No hay imágenes",
-                style = MaterialTheme.typography.headlineSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = "Selecciona o captura una imagen para comenzar",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center
-            )
-        }
+        Text(
+            text = "No hay imágenes",
+            style = MaterialTheme.typography.headlineSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = "Selecciona o captura una imagen para comenzar",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center
+        )
     }
 }
 
 /**
  * Grid de imágenes
+ * AHORA RECIBE UN MODIFIER PARA PODER EXPANDIRSE
  */
 @Composable
 private fun ImageGrid(
     images: List<ImageData>,
-    onImageClick: (ImageData) -> Unit
+    onImageClick: (ImageData) -> Unit,
+    modifier: Modifier = Modifier
 ) {
     LazyVerticalGrid(
         columns = GridCells.Fixed(2),
         contentPadding = PaddingValues(8.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = modifier.fillMaxSize() // Aplica el modifier (weight) y llena el espacio
     ) {
         items(images) { imageData ->
             ImageGridItem(
@@ -234,7 +217,7 @@ private fun ImageGridItem(
             .fillMaxWidth()
             .aspectRatio(1f)
     ) {
-        Box {
+        androidx.compose.foundation.layout.Box {
             AsyncImage(
                 model = imageData.bitmap ?: imageData.uri,
                 contentDescription = imageData.name,
