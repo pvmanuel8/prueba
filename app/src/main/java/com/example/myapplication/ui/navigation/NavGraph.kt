@@ -1,7 +1,5 @@
 package com.example.myapplication.ui.navigation
 
-
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -66,20 +64,23 @@ fun NavGraph(
 
         // Pantalla de procesamiento por lotes
         composable(Screen.Batch.route) {
+            // Obtener imágenes del caché global
+            val images = com.example.myapplication.util.ImageCache.getAll()
+
             com.example.myapplication.ui.screens.batch.BatchScreen(
-                onBack = { navController.popBackStack() }
+                onBack = { navController.popBackStack() },
+                preloadedImages = images
             )
         }
 
         // Pantalla de historial
         composable(Screen.History.route) {
-            // TODO: Implementar HistoryScreen
-            androidx.compose.foundation.layout.Box(
-                modifier = androidx.compose.ui.Modifier.fillMaxSize(),
-                contentAlignment = androidx.compose.ui.Alignment.Center
-            ) {
-                androidx.compose.material3.Text("History Screen - Coming soon")
-            }
+            com.example.myapplication.ui.screens.history.HistoryScreen(
+                onBack = { navController.popBackStack() },
+                onProjectSelected = { imageId ->
+                    navController.navigate(Screen.Editor.createRoute(imageId))
+                }
+            )
         }
     }
 }

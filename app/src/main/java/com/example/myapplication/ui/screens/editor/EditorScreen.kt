@@ -1,6 +1,5 @@
 package com.example.myapplication.ui.screens.editor
 
-
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -10,9 +9,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.BarChart
+import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.Compare
 import androidx.compose.material.icons.filled.Redo
 import androidx.compose.material.icons.filled.Refresh
@@ -42,11 +44,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.example.myapplication.domain.processor.HistogramData
+import com.example.myapplication.domain.processor.HistogramStatistics
 import com.example.myapplication.ui.components.FilterSelector
 import com.example.myapplication.ui.components.HistogramView
 import com.example.myapplication.ui.components.ImageComparisonPreview
 import com.example.myapplication.ui.components.ImagePreview
-import kotlin.properties.ReadOnlyProperty
 
 /**
  * Pantalla principal del editor de imágenes
@@ -233,12 +236,13 @@ fun EditorScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
+                .verticalScroll(rememberScrollState())
         ) {
             // Vista previa de imagen
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(1f)
+                    .height(400.dp)
             ) {
                 when {
                     uiState is EditorUiState.Loading -> {
@@ -284,13 +288,15 @@ fun EditorScreen(
                     currentFilter = appliedFilters.lastOrNull(),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(400.dp)
+                        .height(350.dp)
                 )
             }
+
+            // Espaciado extra al final para asegurar que todo se pueda ver
+            Spacer(modifier = Modifier.height(16.dp))
         }
     }
 }
-
 
 /**
  * Contenido de carga

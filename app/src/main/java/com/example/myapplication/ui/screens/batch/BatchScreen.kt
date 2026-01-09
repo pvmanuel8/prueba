@@ -1,17 +1,20 @@
 package com.example.myapplication.ui.screens.batch
 
-
 import android.net.Uri
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -41,9 +44,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
+import com.example.myapplication.data.model.ImageData
 import com.example.myapplication.ui.components.BatchProgressCard
 import com.example.myapplication.ui.components.FilterSelector
 import com.example.myapplication.ui.components.ImageProgressList
@@ -56,6 +63,7 @@ import com.example.myapplication.ui.components.MultipleImagePickerButton
 @Composable
 fun BatchScreen(
     onBack: () -> Unit,
+    preloadedImages: List<com.example.myapplication.data.model.ImageData> = emptyList(),
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -70,6 +78,19 @@ fun BatchScreen(
     val processedImages by viewModel.processedImages.collectAsState()
 
     val snackbarHostState = remember { SnackbarHostState() }
+
+    // Cargar imágenes precargadas al iniciar
+    LaunchedEffect(preloadedImages) {
+        try {
+            if (preloadedImages.isNotEmpty() && selectedImages.isEmpty()) {
+                android.util.Log.d("BatchScreen", "Cargando ${preloadedImages.size} imágenes precargadas")
+                viewModel.selectImages(preloadedImages)
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("BatchScreen", "Error al cargar imágenes: ${e.message}", e)
+            snackbarHostState.showSnackbar("Error al cargar imágenes: ${e.message}")
+        }
+    }
 
     // Mostrar mensajes
     LaunchedEffect(uiState) {
@@ -128,6 +149,29 @@ fun BatchScreen(
                 )
             )
         },
+        bottomBar = {
+            // Botón anclado abajo solo cuando hay filtro seleccionado
+            if (uiState is BatchUiState.ImagesSelected && selectedFilter != null) {
+                androidx.compose.material3.BottomAppBar(
+                    containerColor = MaterialTheme.colorScheme.surface
+                ) {
+                    Button(
+                        onClick = { viewModel.startProcessing() },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp),
+                        enabled = selectedFilter != null
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.PlayArrow,
+                            contentDescription = null
+                        )
+                        Spacer(modifier = Modifier.padding(4.dp))
+                        Text("Iniciar Procesamiento")
+                    }
+                }
+            }
+        },
         snackbarHost = { SnackbarHost(snackbarHostState) },
         modifier = modifier
     ) { paddingValues ->
@@ -135,8 +179,9 @@ fun BatchScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+            contentPadding = PaddingValues(vertical = 16.dp)
         ) {
             when (uiState) {
                 BatchUiState.Initial -> {
@@ -144,13 +189,16 @@ fun BatchScreen(
                         InitialContent(
                             onImagesSelected = { uris ->
                                 // Cargar imágenes desde URIs
-                                // Por ahora solo mostramos cuántas se seleccionaron
                             }
                         )
                     }
                 }
 
                 is BatchUiState.ImagesSelected -> {
+                    item {
+                        ImagesPreviewGrid(images = selectedImages)
+                    }
+
                     item {
                         FilterSelectionContent(
                             selectedFilter = selectedFilter,
@@ -162,6 +210,11 @@ fun BatchScreen(
                             },
                             canStart = selectedFilter != null
                         )
+                    }
+
+                    // Espaciador al final para evitar que el contenido quede oculto
+                    item {
+                        Spacer(modifier = Modifier.height(80.dp))
                     }
                 }
 
@@ -233,6 +286,81 @@ fun BatchScreen(
 }
 
 @Composable
+fun ImagesPreviewGrid(images: List<ImageData>) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            "Imágenes Seleccionadas",
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
+
+        if (images.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(200.dp)
+                    .background(
+                        MaterialTheme.colorScheme.surfaceVariant,
+                        shape = MaterialTheme.shapes.medium
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    "No hay imágenes seleccionadas",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        } else {
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                contentPadding = PaddingValues(vertical = 8.dp)
+            ) {
+                items(images) { imageData ->
+                    Box(
+                        modifier = Modifier
+                            .width(120.dp)
+                            .height(120.dp)
+                    ) {
+                        AsyncImage(
+                            model = imageData.uri,
+                            contentDescription = "Imagen: ${imageData.name}",
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(
+                                    MaterialTheme.colorScheme.surfaceVariant,
+                                    shape = MaterialTheme.shapes.medium
+                                ),
+                            contentScale = ContentScale.Crop
+                        )
+
+                        // Nombre de la imagen en la parte inferior
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.BottomCenter)
+                                .fillMaxWidth()
+                                .background(
+                                    MaterialTheme.colorScheme.surface.copy(alpha = 0.8f)
+                                )
+                                .padding(4.dp)
+                        ) {
+                            Text(
+                                text = imageData.name,
+                                style = MaterialTheme.typography.labelSmall,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.fillMaxWidth(),
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun InitialContent(
     onImagesSelected: (List<Uri>) -> Unit
 ) {
@@ -279,21 +407,6 @@ private fun FilterSelectionContent(
                 .fillMaxWidth()
                 .height(300.dp)
         )
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        Button(
-            onClick = onStartProcessing,
-            enabled = canStart,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Icon(
-                imageVector = Icons.Default.PlayArrow,
-                contentDescription = null
-            )
-            Spacer(modifier = Modifier.padding(4.dp))
-            Text("Iniciar Procesamiento")
-        }
     }
 }
 

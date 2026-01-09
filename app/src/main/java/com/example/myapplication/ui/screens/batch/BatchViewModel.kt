@@ -1,7 +1,5 @@
 package com.example.myapplication.ui.screens.batch
 
-
-
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -55,23 +53,31 @@ class BatchViewModel(context: Context) : ViewModel() {
      * Selecciona las imágenes para procesar
      */
     fun selectImages(images: List<ImageData>) {
-        if (images.size > 10) {
-            _uiState.value = BatchUiState.Error("Máximo 10 imágenes permitidas")
-            return
+        try {
+            android.util.Log.d("BatchViewModel", "Seleccionando ${images.size} imágenes")
+
+            if (images.size > 10) {
+                _uiState.value = BatchUiState.Error("Máximo 10 imágenes permitidas")
+                return
+            }
+
+            _selectedImages.value = images
+
+            // Inicializar progreso de cada imagen
+            _imageProgresses.value = images.map { image ->
+                ImageProgressItem(
+                    imageName = image.name,
+                    progress = 0f,
+                    state = ProcessingItemState.PENDING
+                )
+            }
+
+            _uiState.value = BatchUiState.ImagesSelected(images.size)
+            android.util.Log.d("BatchViewModel", "Imágenes seleccionadas exitosamente")
+        } catch (e: Exception) {
+            android.util.Log.e("BatchViewModel", "Error al seleccionar imágenes: ${e.message}", e)
+            _uiState.value = BatchUiState.Error("Error: ${e.message}")
         }
-
-        _selectedImages.value = images
-
-        // Inicializar progreso de cada imagen
-        _imageProgresses.value = images.map { image ->
-            ImageProgressItem(
-                imageName = image.name,
-                progress = 0f,
-                state = ProcessingItemState.PENDING
-            )
-        }
-
-        _uiState.value = BatchUiState.ImagesSelected(images.size)
     }
 
     /**
