@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Brightness4
 import androidx.compose.material.icons.filled.Contrast
@@ -53,8 +54,9 @@ fun FilterSelector(
     var showBottomSheet by remember { mutableStateOf(false) }
     var selectedCategory by remember { mutableStateOf(com.example.myapplication.data.model.FilterCategory.BASIC) }
 
+    // Esta columna recibe el modifier con weight(1f) desde el padre
     Column(modifier = modifier) {
-        // Categorías de filtros
+        // Categorías de filtros (Se quedan fijas arriba)
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -72,12 +74,14 @@ fun FilterSelector(
         }
 
         // Lista de filtros según categoría
+        // CAMBIO 1: Pasamos weight(1f) aquí para que la lista ocupe TODO el espacio restante
         FilterList(
             category = selectedCategory,
             currentFilter = currentFilter,
             onFilterClick = { filter ->
                 onFilterSelected(filter)
-            }
+            },
+            modifier = Modifier.weight(1f)
         )
     }
 
@@ -96,7 +100,6 @@ fun FilterSelector(
                     style = MaterialTheme.typography.headlineSmall
                 )
                 Spacer(modifier = Modifier.height(16.dp))
-                // Contenido del bottom sheet
             }
         }
     }
@@ -109,12 +112,14 @@ fun FilterSelector(
 private fun FilterList(
     category: com.example.myapplication.data.model.FilterCategory,
     currentFilter: FilterType?,
-    onFilterClick: (FilterType) -> Unit
+    onFilterClick: (FilterType) -> Unit,
+    modifier: Modifier = Modifier // Añadido parámetro modifier
 ) {
     Column(
-        modifier = Modifier
+        modifier = modifier // Aplicamos el weight aquí
             .fillMaxWidth()
-            .padding(horizontal = 16.dp),
+            .padding(horizontal = 16.dp)
+            .verticalScroll(rememberScrollState()), // CAMBIO 2: Añadimos Scroll Vertical
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         when (category) {
@@ -128,6 +133,8 @@ private fun FilterList(
                 TransformationsList(currentFilter, onFilterClick)
             }
         }
+        // Espaciador final para que el último elemento no quede pegado al borde
+        Spacer(modifier = Modifier.height(16.dp))
     }
 }
 
@@ -367,6 +374,7 @@ private fun FilterItemWithSlider(
     valueRange: ClosedFloatingPointRange<Float>,
     valueLabel: String? = null
 ) {
+    // Usamos Card sin peso, dejará que el contenido determine el tamaño
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(

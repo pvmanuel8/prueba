@@ -39,9 +39,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
@@ -50,6 +48,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import com.example.myapplication.data.model.FilterType
 import com.example.myapplication.data.model.ImageData
 import com.example.myapplication.ui.components.BatchProgressCard
 import com.example.myapplication.ui.components.FilterSelector
@@ -150,7 +149,7 @@ fun BatchScreen(
             )
         },
         bottomBar = {
-            // Botón anclado abajo solo cuando hay filtro seleccionado
+            // ... (El código de tu BottomAppBar se queda igual) ...
             if (uiState is BatchUiState.ImagesSelected && selectedFilter != null) {
                 androidx.compose.material3.BottomAppBar(
                     containerColor = MaterialTheme.colorScheme.surface
@@ -175,110 +174,94 @@ fun BatchScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         modifier = modifier
     ) { paddingValues ->
-        LazyColumn(
+        // CAMBIO PRINCIPAL: Usamos Column en vez de LazyColumn
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
                 .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-            contentPadding = PaddingValues(vertical = 16.dp)
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             when (uiState) {
                 BatchUiState.Initial -> {
-                    item {
-                        InitialContent(
-                            onImagesSelected = { uris ->
-                                // Cargar imágenes desde URIs
-                            }
-                        )
-                    }
+                    InitialContent(
+                        onImagesSelected = { uris ->
+                            // Cargar imágenes desde URIs
+                        }
+                    )
                 }
 
                 is BatchUiState.ImagesSelected -> {
-                    item {
-                        ImagesPreviewGrid(images = selectedImages)
-                    }
+                    // 1. Grid de imágenes (parte superior fija)
+                    ImagesPreviewGrid(images = selectedImages)
 
-                    item {
-                        FilterSelectionContent(
-                            selectedFilter = selectedFilter,
-                            onFilterSelected = { filter ->
-                                viewModel.selectFilter(filter)
-                            },
-                            onStartProcessing = {
-                                viewModel.startProcessing()
-                            },
-                            canStart = selectedFilter != null
-                        )
-                    }
-
-                    // Espaciador al final para evitar que el contenido quede oculto
-                    item {
-                        Spacer(modifier = Modifier.height(80.dp))
-                    }
+                    // 2. Filtros (ocupa el resto de la pantalla)
+                    FilterSelectionContent(
+                        selectedFilter = selectedFilter,
+                        onFilterSelected = { filter ->
+                            viewModel.selectFilter(filter)
+                        },
+                        onStartProcessing = {
+                            viewModel.startProcessing()
+                        },
+                        canStart = selectedFilter != null,
+                        // ESTA ES LA CLAVE: weight(1f) para llenar el espacio
+                        modifier = Modifier.weight(1f)
+                    )
                 }
 
                 BatchUiState.Processing -> {
-                    item {
-                        ProcessingContent(
-                            currentImage = imageProgresses.indexOfFirst {
-                                it.state == com.example.myapplication.ui.components.ProcessingItemState.PROCESSING
-                            } + 1,
-                            totalImages = selectedImages.size,
-                            overallProgress = overallProgress,
-                            imageProgresses = imageProgresses,
-                            estimatedTimeRemaining = estimatedTimeRemaining,
-                            onCancel = { viewModel.cancelProcessing() }
-                        )
-                    }
+                    ProcessingContent(
+                        currentImage = imageProgresses.indexOfFirst {
+                            it.state == com.example.myapplication.ui.components.ProcessingItemState.PROCESSING
+                        } + 1,
+                        totalImages = selectedImages.size,
+                        overallProgress = overallProgress,
+                        imageProgresses = imageProgresses,
+                        estimatedTimeRemaining = estimatedTimeRemaining,
+                        onCancel = { viewModel.cancelProcessing() }
+                    )
                 }
 
                 is BatchUiState.Completed -> {
-                    item {
+                    // Para el estado completado, si la lista es larga, usamos LazyColumn dentro
+                    Column(modifier = Modifier.weight(1f)) {
                         CompletedContent(
                             processedCount = processedImages.size,
                             onSaveAll = { viewModel.saveAll() },
                             onReset = { viewModel.reset() }
                         )
-                    }
-
-                    item {
                         Text(
                             "Resultados",
-                            style = MaterialTheme.typography.titleMedium
+                            style = MaterialTheme.typography.titleMedium,
+                            modifier = Modifier.padding(vertical = 8.dp)
                         )
-                    }
-
-                    items(imageProgresses) { item ->
-                        // Mostrar progreso final
+                        // Lista scrollable para los resultados
+                        LazyColumn {
+                            items(imageProgresses) { item ->
+                                // Mostrar progreso final
+                            }
+                        }
                     }
                 }
 
                 BatchUiState.Saving -> {
-                    item {
-                        SavingContent()
-                    }
+                    SavingContent()
                 }
 
                 is BatchUiState.Saved -> {
-                    item {
-                        SavedContent(onDone = onBack)
-                    }
+                    SavedContent(onDone = onBack)
                 }
 
                 BatchUiState.Cancelled -> {
-                    item {
-                        CancelledContent(onReset = { viewModel.reset() })
-                    }
+                    CancelledContent(onReset = { viewModel.reset() })
                 }
 
                 is BatchUiState.Error -> {
-                    item {
-                        ErrorContent(
-                            message = (uiState as BatchUiState.Error).message,
-                            onRetry = { viewModel.reset() }
-                        )
-                    }
+                    ErrorContent(
+                        message = (uiState as BatchUiState.Error).message,
+                        onRetry = { viewModel.reset() }
+                    )
                 }
             }
         }
@@ -390,9 +373,11 @@ private fun FilterSelectionContent(
     selectedFilter: com.example.myapplication.data.model.FilterType?,
     onFilterSelected: (com.example.myapplication.data.model.FilterType) -> Unit,
     onStartProcessing: () -> Unit,
-    canStart: Boolean
+    canStart: Boolean,
+    modifier: Modifier = Modifier // <--- Nuevo parámetro
 ) {
-    Column(modifier = Modifier.fillMaxWidth()) {
+    // Aplicamos el modifier (que trae el weight) a la columna
+    Column(modifier = modifier.fillMaxWidth()) {
         Text(
             "Selecciona un filtro para aplicar a todas las imágenes",
             style = MaterialTheme.typography.titleMedium
@@ -404,8 +389,8 @@ private fun FilterSelectionContent(
             onFilterSelected = onFilterSelected,
             currentFilter = selectedFilter,
             modifier = Modifier
-                .fillMaxWidth()
-                .height(300.dp)
+                .fillMaxSize() // <--- CAMBIO: fillMaxSize en lugar de height(300.dp)
+            // Nota: FilterSelector internamente debe encargarse del scroll si hay muchos filtros
         )
     }
 }

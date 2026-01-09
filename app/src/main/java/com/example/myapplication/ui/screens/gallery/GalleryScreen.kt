@@ -109,11 +109,11 @@ fun GalleryScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            // Indicador de carga múltiple
+            // 1. Indicador de carga (Se queda arriba)
             when (val state = uiState) {
                 is GalleryUiState.LoadingMultiple -> {
                     LinearProgressIndicator(
-                        progress =  state.current.toFloat() / state.total ,
+                        progress = state.current.toFloat() / state.total,
                         modifier = Modifier.fillMaxWidth()
                     )
                     Text(
@@ -125,11 +125,33 @@ fun GalleryScreen(
                 else -> {}
             }
 
-            // Botones de acción
+            // 2. CONTENIDO PRINCIPAL (Imágenes o Texto vacío)
+            // Usamos Box con weight(1f) para que ocupe todo el espacio disponible
+            // y empuje los botones hacia abajo.
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth(),
+                contentAlignment = Alignment.Center
+            ) {
+                if (loadedImages.isEmpty()) {
+                    EmptyGalleryContent()
+                } else {
+                    ImageGrid(
+                        images = loadedImages,
+                        onImageClick = { imageData ->
+                            android.util.Log.d("GalleryScreen", "Navegando a editor con imagen: ${imageData.id}")
+                            onImageSelected(imageData.id)
+                        }
+                    )
+                }
+            }
+
+            // 3. BOTONES DE ACCIÓN (Ahora están al final)
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp),
+                    .padding(16.dp), // Padding alrededor de los botones
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 // Seleccionar imagen individual o múltiple
@@ -157,7 +179,7 @@ fun GalleryScreen(
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                // Botón para procesamiento por lotes
+                // Botón para procesamiento por lotes (solo si hay imágenes)
                 if (loadedImages.size >= 2) {
                     androidx.compose.material3.OutlinedButton(
                         onClick = onBatchProcessing,
@@ -172,19 +194,6 @@ fun GalleryScreen(
                     }
                 }
             }
-
-            // Grid de imágenes cargadas
-            if (loadedImages.isEmpty()) {
-                EmptyGalleryContent()
-            } else {
-                ImageGrid(
-                    images = loadedImages,
-                    onImageClick = { imageData ->
-                        android.util.Log.d("GalleryScreen", "Navegando a editor con imagen: ${imageData.id}")
-                        onImageSelected(imageData.id)
-                    }
-                )
-            }
         }
     }
 }
@@ -194,27 +203,23 @@ fun GalleryScreen(
  */
 @Composable
 private fun EmptyGalleryContent() {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+        modifier = Modifier.fillMaxWidth()
     ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Text(
-                text = "No hay imágenes",
-                style = MaterialTheme.typography.headlineSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = "Selecciona o captura una imagen para comenzar",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center
-            )
-        }
+        Text(
+            text = "No hay imágenes",
+            style = MaterialTheme.typography.headlineSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = "Selecciona o captura una imagen para comenzar",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center
+        )
     }
 }
 
@@ -230,7 +235,8 @@ private fun ImageGrid(
         columns = GridCells.Fixed(2),
         contentPadding = PaddingValues(8.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier.fillMaxSize()
     ) {
         items(images) { imageData ->
             ImageGridItem(
